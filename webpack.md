@@ -43,9 +43,10 @@ new webpack.optimize.UglifyJsPlugin({
 ----准备文件解析函数----
 handleFile (filepath) {
   let str = fs.readFileAsync(filepath)
-  let ast = require('@babel/parser').parse(require('fs').readFileSync(filepath, 'utf-8'), {
-    sourceType: 'module'
-  })
+  let ast = require('@babel/parser').parse(
+    require('fs').readFileSync(filepath, 'utf-8'),
+    { sourceType: 'module' }
+  )
   return {
     filepath,
     dependences: ((ast, filepath) => {
