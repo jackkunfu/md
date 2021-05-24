@@ -75,3 +75,21 @@
 # token 也类似一个令牌，无状态，用户信息都被加密到 token 中，服务器收到 token 后解密就可知道是哪个用户。需要开发者手动添加。
 
 # jwt 只是一个跨域认证的方案
+
+## cookie 设置相关属性
+```
+Secure：标记为 Secure 的 Cookie 只应通过被HTTPS协议加密过的请求发送给服务端，保护 Cookie 在浏览器和 Web 服务器间的传输过程中不被窃取和篡改
+HTTPOnly：设置 HTTPOnly 属性可以防止客户端脚本通过 document.cookie 等方式访问 Cookie，有助于避免 XSS 攻击。
+SameSite：SameSite 属性可以让 Cookie 在跨站请求时不会被发送，从而可以阻止跨站请求伪造攻击（CSRF）。
+  Strict 仅允许一方请求携带 Cookie，即浏览器将只发送相同站点请求的 Cookie，即当前网页 URL 与请求目标 URL 完全一致。
+  Lax 允许部分第三方请求携带 Cookie
+  None 无论是否跨站都会发送 Cookie
+Expires：设置 Cookie 的过期时间
+Max-Age：设置在 Cookie 失效之前需要经过的秒数， Expires 和 Max-Age 都存在，Max-Age 优先级更高。
+```
+
+## cookie 缺点
+```
+大小较小（一般4K）、安全性不高（csrf,xss攻击等）、增加请求大小（服务端生成，传输到客户端，每次请求都会带上）
+```
+
