@@ -1,20 +1,22 @@
 # 三次握手
+```
+客户端发送请求序列号 syn 以及 随机生成一个 seq:random_seq_client
 
-## 客户端发送请求序列号 syn 以及 随机生成一个 seq:random_seq_client
+服务器接收到 客户端(syn seq) 信息后回复 ack = random_seq_client + 1 以及 服务端 随机生成一个 seq:random_seq_server
 
-## 服务器接收到 客户端(syn seq) 信息后回复 ack = random_seq_client + 1 以及 服务端 随机生成一个 seq:random_seq_server
-
-## 客户端接收到 服务端(ack seq) 信息后不随机生成了 回复 ack = random_seq_server + 1 以及 seq = ack
+客户端接收到 服务端(ack seq) 信息后不随机生成了 回复 ack = random_seq_server + 1 以及 seq = ack
+```
 
 # 四次挥手
+```
+client 发送 fin 给 server
 
-## client 发送 fin 给 server
+server 收到 fin 回复 ack 关闭连接
 
-## server 收到 fin 回复 ack 关闭连接
+server 发送 fin 给 client
 
-## server 发送 fin 给 client
-
-## client 收到 fin 回复 ack
+client 收到 fin 回复 ack
+```
 
 ```
 （1）客户端处于FIN_WAIT_1状态
@@ -24,7 +26,6 @@
 ```
 
 # ssl 握手协议
-
 ```
 （1）客户端发送其支持的算法列表和客户端随机数
 （2）服务端返回选择的算法，服务端证书（包含服务端的公钥），服务端随机数
