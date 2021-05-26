@@ -37,8 +37,6 @@ new webpack.optimize.UglifyJsPlugin({
 
 # 简易实现
 
-## 借用 babel 编译工具方法
-
 ```
 ----准备文件解析函数----
 handleFile (filepath) {
@@ -101,4 +99,76 @@ const bundle = `(function(graph){
 })(${JSON.stringify(code)})`
 // 把文件内容写入到文件系统
 fs.writeFileSync(filePath, bundle, 'utf-8')
+```
+
+# webpack 自定义 loader
+```
+增加自定义 loader 目录
+配置 resolveLoader: [ 'node_modules', './myLoaderDir' ]
+
+开发：
+  导出一个函数， 参数是当前的处理的文件源码字符串
+    自定义 loader 函数不能是箭头函数，因为自定义 loader 函数中会调取 webpack 的一些 api 实现功能，调取方式是通过 this.xxx(callback) 的方式，需要用到 this，箭头函数 this 会丢失
+  须有返回值 return
+
+  /myLoaderDir/self-less-plugin.js
+    const less = require('less')
+
+    module.exports = function (source) {
+      console.log(this) // 借用 this 调用 webpack 的 api
+      console.log(this.query) // 配置使用 loader 的时候的传参
+      console.log(source)
+
+      const result = handleRes(source)
+
+      1. 同步的方法处理，直接 return 即可
+        return result
+
+      2. 可以不直接使用 return 返回单个数据，可以使用 this.callback
+        // errorInfo：错误信息，如果没有，传 null
+        // result：返回的数据
+        this.callback(errorInfo, result)
+
+      3. 异步的逻辑处理，须借用 webpack 提供的 this.async 方式返回结果
+        const callback = this.async() // 声明一个 async 方法生成的 callback 对象
+        setTimeout(() => {
+          callback(null, result)
+        })
+
+      4. 例子: 使用 less 处理文件
+        less.render(res, (err, res) => {
+          this.callback(err, res.css)
+        })
+    }
+
+使用：
+  1. module.rules 直接使用
+    {
+      module: {
+        rules: [
+          {
+            test: '\.js',
+            1. 不传参
+            use: path.resolve(__dirnama, './myLoaderDir/self-less-plugin.js')   // 须是绝对路径 经过 path.resolve(__dirnama 处理
+            2. 传参
+            use: { // 用对象形式可以传参 自定义 loader 中 通过 this.query 接收
+              loader: path.resolve(__dirnama, './myLoaderDir/self-less-plugin.js')   // 须是绝对路径 经过 path.resolve(__dirnama 处理,
+              options: { a: 1, b: 2 }
+            }
+          }
+        ]
+      }
+    }
+    
+  2. 配置 resolveLoader
+    {
+      resolveLoader: [ 'node_modules', './myLoaderDir' ]
+    }
+    之后 可以直接文件名使用即可 不需要 path.resolve(__dirnama 处理
+    use: 'self-less-plugin',
+    use: {
+      loader: 'self-less-plugin',
+      options: { a: 1, b: 2 }
+    }
+
 ```
