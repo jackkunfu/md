@@ -1,0 +1,245 @@
+## 线上去除 console 增加 UglifyJsPlugin 配置 compress 的 drop_console
+
+```
+new webpack.optimize.UglifyJsPlugin({
+  compress: {
+    warnings: false,
+    drop_debugger: true,
+    drop_console: true
+  },
+  sourceMap: true
+})
+```
+
+# webpack 构建流程
+
+## Webpack 的运行流程是一个串行的过程,从启动到结束会依次执行以下流程 :
+
+```
+初始化参数：从配置文件和 Shell 语句中读取与合并参数,得出最终的参数。
+
+用上一步得到的参数初始化 Compiler 对象,加载所有配置的插件,执行对象的 run 方法开始执行编译。
+
+确定入口：根据配置中的 entry 找出所有的入口文件。
+
+编译模块：从入口文件出发,调用所有配置的 Loader 对模块进行翻译,再找出该模块依赖的模块,再递归本步骤直到所有入口依赖的文件都经过了本步骤的处理。
+
+在经过使用 Loader 翻译完所有模块后,得到了每个模块被翻译后的最终内容以及它们之间的依赖关系。
+
+输出资源：根据入口和模块之间的依赖关系,组装成一个个包含多个模块的 Chunk,再把每个 Chunk 转换成一个单独的文件加入到输出列表,这步是可以修改输出内容的最后机会。
+
+输出完成：在确定好输出内容后,根据配置确定输出的路径和文件名,把文件内容写入到文件系统。
+```
+
+```
+在以上过程中,Webpack 会在特定的时间点广播出特定的事件,插件在监听到感兴趣的事件后会执行特定的逻辑,并且插件可以调用 Webpack 提供的 API 改变 Webpack 的运行结果。
+```
+
+# 简易实现  simple-webpack
+```
+const fs = require('fs')
+const babelParse = require('@babel/parser')
+module.exports = class Webpack {
+  constructor (config) {
+    this.config = config
+    this.modules = []
+  }
+
+  run () {
+    let { entry } = this.config
+    let entryModule = this.parse(entry)
+
+    // 递归解析所有模块存入 this.modules
+    this.modules.push(entryModule)
+    this.modules.forEach(el => {
+      Object.keys(el.dependences).forEach(depen => {
+        this.modules.push(this.parse(el.dependences[depen]))
+      })
+    })
+  }
+
+  parse (file) {
+    return this.handleFile(file)
+  }
+
+  handleFile (filepath) {
+    let str = fs.readFileAsync(filepath)
+    let ast = require('@babel/parser').parse(
+      fs.readFileSync(filepath, 'utf-8'),
+      { sourceType: 'module' }
+    )
+    return {
+      filepath,
+      dependences: ((ast, filepath) => {
+        let dependecies = {}
+        require('@babel/traverse').default(ast, {
+          // 类型为 ImportDeclaration 的 AST 节点 (即为import 语句)
+          ImportDeclaration({ node }) {
+            const dirname = path.dirname(filepath) // 当前处理文件的目录名称，保存依赖模块路径,之后生成依赖关系图需要用到
+            const curPath = './' + path.join(dirname, node.source.value)
+            dependecies[node.source.value] = curPath 
+          }
+        })
+        return dependecies
+      })(ast, filepath),
+      code: require('@babel/core').transformFromAst(ast, null, {
+        presets: ['@babel/preset-env'] // 通过 预设 env 处理后生成低端浏览器兼容的代码
+      }).code
+    }
+  }
+}
+```
+```
+重写 require 函数 (浏览器不能识别commonjs语法),输出bundle
+// 输出文件路径
+const filePath = path.join(this.output.path, this.output.filename)
+// 懵逼了吗? 没事,下一节我们捋一捋
+const bundle = `(function(graph){
+  function require(module){
+    function localRequire(relativePath){
+      return require(graph[module].dependecies[relativePath])
+    }
+    var exports = {};
+    (function(require,exports,code){
+      eval(code)
+    })(localRequire,exports,graph[module].code);
+    return exports;
+  }
+  require('${this.entry}')
+})(${JSON.stringify(code)})`
+// 把文件内容写入到文件系统
+fs.writeFileSync(filePath, bundle, 'utf-8')
+```
+
+# webpack 自定义 loader
+```
+增加自定义 loader 目录
+配置 resolveLoader: [ 'node_modules', './myLoaderDir' ]
+
+开发：
+  导出一个函数， 参数是当前的处理的文件源码字符串
+    自定义 loader 函数不能是箭头函数，因为自定义 loader 函数中会调取 webpack 的一些 api 实现功能，调取方式是通过 this.xxx(callback) 的方式，需要用到 this，箭头函数 this 会丢失
+  须有返回值 return
+
+  /myLoaderDir/self-less-plugin.js
+    const less = require('less')
+
+    module.exports = function (source) {
+      console.log(this) // 借用 this 调用 webpack 的 api
+      console.log(this.query) // 配置使用 loader 的时候的传参
+      console.log(source)
+
+      const result = handleRes(source)
+
+      1. 同步的方法处理，直接 return 即可
+        return result
+
+      2. 可以不直接使用 return 返回单个数据，可以使用 this.callback
+        // errorInfo：错误信息，如果没有，传 null
+        // result：返回的数据
+        this.callback(errorInfo, result)
+
+      3. 异步的逻辑处理，须借用 webpack 提供的 this.async 方式返回结果
+        const callback = this.async() // 声明一个 async 方法生成的 callback 对象
+        setTimeout(() => {
+          callback(null, result)
+        })
+
+      4. 例子: 使用 less 处理文件
+        less.render(res, (err, res) => {
+          this.callback(err, res.css)
+        })
+    }
+
+使用：
+  1. module.rules 直接使用
+    {
+      module: {
+        rules: [
+          {
+            test: '\.js',
+            1. 不传参
+            use: path.resolve(__dirnama, './myLoaderDir/self-less-plugin.js')   // 须是绝对路径 经过 path.resolve(__dirnama 处理
+            2. 传参
+            use: { // 用对象形式可以传参 自定义 loader 中 通过 this.query 接收
+              loader: path.resolve(__dirnama, './myLoaderDir/self-less-plugin.js')   // 须是绝对路径 经过 path.resolve(__dirnama 处理,
+              options: { a: 1, b: 2 }
+            }
+          }
+        ]
+      }
+    }
+    
+  2. 配置 resolveLoader
+    {
+      resolveLoader: [ 'node_modules', './myLoaderDir' ]
+    }
+    之后 可以直接文件名使用即可 不需要 path.resolve(__dirnama 处理
+    use: 'self-less-plugin',
+    use: {
+      loader: 'self-less-plugin',
+      options: { a: 1, b: 2 }
+    }
+
+```
+
+# webpack 自定义 plugin
+```
+1. 是一个构造函数，new 实例化之后，配置给 webpack 的 plugins 中等待声明周期的钩子执行触发执行
+2. 如何定义在具体钩子事件执行：定义原型 apply 方法，定义触发何种钩子执行
+  class SomePlugin {
+    constructor (opt) {
+      this.opt = opt
+    }
+
+    apply (compiler) { // apply 函数参数为当前的 compiler ，可以借此对象定义钩子触发函数，
+      // 钩子类型有同步和异步两种
+      //  tap 同步钩子的定义触发，tapAsync 异步钩子的定义触发
+      // 不同的钩子，有不同的参数传递， 例如：webpack 当前的资源对象： complication
+      compiler.hooks.[hookName].tap('自定义的事件名称', complication => {
+        console.log(complication)
+
+        // tap 的钩子没有第二个回调参数函数执行
+      })
+      compiler.hooks.[hookName].tapAsync('自定义的事件名称', (complication, cb) => {
+        console.log(complication)
+
+        // 例子：生成文件 assets 属性处理
+        complication.assets['a.txt'] = {
+          source: function () {
+            return '内容字符串'
+          },
+          size: function () {
+            return 内容字符串的长度
+          }
+        }
+
+        cb() // tapAsync 最终需要执行第二个回调函数    异步功能完成之后通知 webpack 
+      })
+    }
+  }
+```
+
+
+# babel：将新语法转化为 es5，默认只转换JS语法，而不转换新的API，
+```
+配置：
+  options: {
+    "presets": [
+      ["@babel/env", { // env 表示技术委员会已经发布的所有功能，将来的新的发布后也会增加更新 es2015 es2016 es2017 等等，env 的核心目的是通过配置得知目标环境的特点，然后只做必要的转换
+        "targets": {
+          "browsers": ["last 2 versions", "ie 11"]
+        },
+        "useBuiltIns": "usage" // 配置 useBuiltIns: 'usage' 属性可以使 babel-polyfill 中的按需加载，根据具体使用情况 polyfill
+      }]
+    ],
+    "plugins": ["@babel/transform-runtime"] // 配置使用 transform-runtime 插件，可以利用插件中的 helps 函数对重复出现的函数进行集中打包，减少体积
+  }
+
+执行：
+  Plugin 会运行在 Preset 之前。
+  Plugin 会从前到后顺序执行。
+  Preset 的顺序则 刚好相反(从后向前)。 preset 的逆向顺序主要是为了保证向后兼容，一般配置 Preset 都是按照规范的时间顺序列出即可
+
+更详细： https://zhuanlan.zhihu.com/p/43249121
+```
