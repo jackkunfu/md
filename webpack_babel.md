@@ -146,7 +146,7 @@ fs.writeFileSync(filePath, bundle, 'utf-8')
         })
 
       4. 例子: 使用 less 处理文件
-        less.render(res, (err, res) => {
+        less.render(source, (err, res) => {
           this.callback(err, res.css)
         })
     }
@@ -159,10 +159,10 @@ fs.writeFileSync(filePath, bundle, 'utf-8')
           {
             test: '\.js',
             1. 不传参
-            use: path.resolve(__dirnama, './myLoaderDir/self-less-plugin.js')   // 须是绝对路径 经过 path.resolve(__dirnama 处理
+            use: path.resolve(__dirname, './myLoaderDir/self-less-plugin.js')   // 须是绝对路径 经过 path.resolve(__dirname 处理
             2. 传参
             use: { // 用对象形式可以传参 自定义 loader 中 通过 this.query 接收
-              loader: path.resolve(__dirnama, './myLoaderDir/self-less-plugin.js')   // 须是绝对路径 经过 path.resolve(__dirnama 处理,
+              loader: path.resolve(__dirname, './myLoaderDir/self-less-plugin.js')   // 须是绝对路径 经过 path.resolve(__dirname 处理,
               options: { a: 1, b: 2 }
             }
           }
@@ -174,7 +174,7 @@ fs.writeFileSync(filePath, bundle, 'utf-8')
     {
       resolveLoader: [ 'node_modules', './myLoaderDir' ]
     }
-    之后 可以直接文件名使用即可 不需要 path.resolve(__dirnama 处理
+    之后 可以直接文件名使用即可 不需要 path.resolve(__dirname 处理
     use: 'self-less-plugin',
     use: {
       loader: 'self-less-plugin',
@@ -226,7 +226,7 @@ fs.writeFileSync(filePath, bundle, 'utf-8')
 配置：
   options: {
     "presets": [
-      ["@babel/env", { // env 表示技术委员会已经发布的所有功能，将来的新的发布后也会增加更新 es2015 es2016 es2017 等等，env 的核心目的是通过配置得知目标环境的特点，然后只做必要的转换
+      ["@babel/env", { // env 表示包含 es2015 + es2016 + es2017 等等技术委员会已经发布的所有功能，env 的核心目的是通过配置得知目标环境的特点，然后只做必要的转换
         "targets": {
           "browsers": ["last 2 versions", "ie 11"]
         },
