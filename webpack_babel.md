@@ -35,6 +35,95 @@ new webpack.optimize.UglifyJsPlugin({
 在以上过程中,Webpack 会在特定的时间点广播出特定的事件,插件在监听到感兴趣的事件后会执行特定的逻辑,并且插件可以调用 Webpack 提供的 API 改变 Webpack 的运行结果。
 ```
 
+## 钩子大致类型
+```
+const {
+  SyncHook, // 触发时按照顺序依次执行
+  SyncBailHook, // 根据每一步返回的值来决定要不要继续往下走，如果return了一个非undefined的值 那就不会往下走
+
+  SyncWaterfallHook, // 每一步都依赖上一步的执行结果, 上一步结果作为下一步的参数
+  ---
+  let [first, ...others] = this.tasks;
+  /** 利用reduce() 累计执行 
+    * 首先传入第一个 first 并执行
+    * l是上一个task n是当前task
+    * 这样满足了 下一个函数依赖上一个函数的执行结果
+  */
+  others.reduce((l,n)=>{
+      return n(l);
+  },first(...args));
+  ---
+
+  SyncLoopHook, // 在满足一定条件时 循环执行某个函数
+  ---
+  this.hooks.tap('node',(name) => {
+    console.log('node',name);
+    /** 当不满足条件时 会循环执行该函数 
+      * 返回值为udefined时 终止该循环执行
+    */
+    return ++this.index === 5 ? undefined : '学完5遍node后再学react';
+  });
+  this.tasks.forEach((task)=>{
+    /** 注意 此处do{}while()循环的是每个单独的task */
+    do{
+      /** 拿到每个task执行后返回的结果 */
+      result = task(...args);
+      /** 返回结果不是udefined时 会继续循环执行该task */
+    } while (result !== undefined);
+  });
+  ---
+
+  AsyncParallelHook, AsyncParallelBailHook, AsyncSeriesHook, AsyncSeriesBailHook, AsyncSeriesWaterfallHook
+} = require("tapable")
+Sync开头的都是同步的钩子，Async开头的都是异步的钩子。而异步的钩子又可分为并行和串行，其实同步的钩子也可以理解为串行的钩子。
+使用：
+  声明，定义
+    this.hooks.同步钩子名称.tap()
+    this.hooks.异步钩子名称.tapAsync()
+  调用执行:
+    this.hooks.同步钩子名称.call()
+    this.hooks.异步钩子名称.callAsync()
+```
+## Compiler 相关
+```
+class Compiler {
+  construtor () {
+    this.hooks = Object.freeze({ // 定义各种钩子对象，大致三类  SyncHook   SyncBailHook   AsyncSeriesHook
+			initialize: new SyncHook([]), // /** @type {SyncHook<[]>} */
+			shouldEmit: new SyncBailHook(["compilation"]), // /** @type {SyncBailHook<[Compilation], boolean>} */
+			done: new AsyncSeriesHook(["stats"]), // /** @type {AsyncSeriesHook<[Stats]>} */
+			afterDone: new SyncHook(["stats"]),
+			additionalPass: new AsyncSeriesHook([]),
+			beforeRun: new AsyncSeriesHook(["compiler"]),
+			run: new AsyncSeriesHook(["compiler"]),
+			emit: new AsyncSeriesHook(["compilation"]),
+			assetEmitted: new AsyncSeriesHook(["file", "info"]),
+			afterEmit: new AsyncSeriesHook(["compilation"]),
+			thisCompilation: new SyncHook(["compilation", "params"]),
+			compilation: new SyncHook(["compilation", "params"]),
+			normalModuleFactory: new SyncHook(["normalModuleFactory"]),
+			contextModuleFactory: new SyncHook(["contextModuleFactory"]),
+			beforeCompile: new AsyncSeriesHook(["params"]),
+			compile: new SyncHook(["params"]),
+			make: new AsyncParallelHook(["compilation"]),
+			finishMake: new AsyncSeriesHook(["compilation"]),
+			afterCompile: new AsyncSeriesHook(["compilation"]),
+			watchRun: new AsyncSeriesHook(["compiler"]),
+			failed: new SyncHook(["error"]),
+			invalid: new SyncHook(["filename", "changeTime"]),
+			watchClose: new SyncHook([]),
+			shutdown: new AsyncSeriesHook([]),
+			infrastructureLog: new SyncBailHook(["origin", "type", "args"]),
+			environment: new SyncHook([]),
+			afterEnvironment: new SyncHook([]),
+			afterPlugins: new SyncHook(["compiler"]),
+			afterResolvers: new SyncHook(["compiler"]),
+			entryOption: new SyncBailHook(["context", "entry"])
+    })
+  }
+}
+```
+
 # 简易实现  simple-webpack
 ```
 const fs = require('fs')
@@ -47,13 +136,16 @@ module.exports = class Webpack {
 
   run () {
     let { entry } = this.config
+    // 从入口开始处理入口模块
     let entryModule = this.parse(entry)
+    this.modules.push(entryModule)
 
     // 递归解析所有模块存入 this.modules
-    this.modules.push(entryModule)
     this.modules.forEach(el => {
       Object.keys(el.dependences).forEach(depen => {
-        this.modules.push(this.parse(el.dependences[depen]))
+        this.modules.push(this.parse(el.dependences[depen]))、
+
+        // 后续需要去重优化，可以解决重复打包以及相互循环引用的问题
       })
     })
   }
