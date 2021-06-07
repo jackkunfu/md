@@ -213,7 +213,7 @@ fs.writeFileSync(filePath, bundle, 'utf-8')
     自定义 loader 函数不能是箭头函数，因为自定义 loader 函数中会调取 webpack 的一些 api 实现功能，调取方式是通过 this.xxx(callback) 的方式，需要用到 this，箭头函数 this 会丢失
   须有返回值 return
 
-  /myLoaderDir/self-less-plugin.js
+  /myLoaderDir/self-less-loader.js
     const less = require('less')
 
     module.exports = function (source) {
@@ -251,10 +251,10 @@ fs.writeFileSync(filePath, bundle, 'utf-8')
           {
             test: '\.js',
             1. 不传参
-            use: path.resolve(__dirname, './myLoaderDir/self-less-plugin.js')   // 须是绝对路径 经过 path.resolve(__dirname 处理
+            use: path.resolve(__dirname, './myLoaderDir/self-less-loader.js')   // 须是绝对路径 经过 path.resolve(__dirname 处理
             2. 传参
             use: { // 用对象形式可以传参 自定义 loader 中 通过 this.query 接收
-              loader: path.resolve(__dirname, './myLoaderDir/self-less-plugin.js')   // 须是绝对路径 经过 path.resolve(__dirname 处理,
+              loader: path.resolve(__dirname, './myLoaderDir/self-less-loader.js')   // 须是绝对路径 经过 path.resolve(__dirname 处理,
               options: { a: 1, b: 2 }
             }
           }
@@ -267,9 +267,9 @@ fs.writeFileSync(filePath, bundle, 'utf-8')
       resolveLoader: [ 'node_modules', './myLoaderDir' ]
     }
     之后 可以直接文件名使用即可 不需要 path.resolve(__dirname 处理
-    use: 'self-less-plugin',
+    use: 'self-less-loader',
     use: {
-      loader: 'self-less-plugin',
+      loader: 'self-less-loader',
       options: { a: 1, b: 2 }
     }
 
