@@ -1,5 +1,7 @@
-# vue diff 算法 - 同级比对渲染
-# diff - patch(vnode, oldVnode)
+# vue2
+
+## vue diff 算法 - 同级比对渲染
+## diff - patch(vnode, oldVnode)
 ```
 sameVnode - key 相等 tag 相等 data 相等 ...
   patchVnode 流程
@@ -54,7 +56,7 @@ function createComputedGetter (key) {
     const watcher = vm._computedWatchers && vm._computedWatchers[key]
     if (watcher) {
       if (watcher.dirty) {
-        watcher.evaluate()
+        watcher.evaluate() // 执行 evaluate: 调用 get 方法重新计算值并把当前的 watcher 的 dirty 属性重置为 false，继续缓存
       }
       if (Dep.target) {
         watcher.depend()
@@ -68,6 +70,8 @@ function createComputedGetter (key) {
 computed watcher 实例 updata 的时候 判断如果 存在 lazy: true 则 把 watcher.dirty = true
 数据变化触发当前 computed watcher 时触发 get 属性：createComputedGetter 方法时 if (watcher.dirty) 执行 watcher.evaluate() 重新计算下当前最新的值，其他变化直接展示之前的数据不会重新计算
 ```
+
+# vue3
 ```
 vue3通过优化diff算法减少了遍历成本，然后通过静态提升以及时间侦听器缓存减少了多次创建的开销，从而组件更新性的能得到了提升。
   diff算法的优化
@@ -78,5 +82,5 @@ vue3通过优化diff算法减少了遍历成本，然后通过静态提升以及
     事件绑定点函数都是同一个函数，所以不用追踪变化，不做标记，直接缓存起来复用即可。
   ssr渲染
     当有大量静态内容的时候，这些内容会被当作纯字符串推进一个buffer里面，即使存在动态的绑定，会通过模板插值嵌入进去。这样会比通过虚拟DOM来渲染的快上很多。
-    当静态内容大到一定量级的时候，会用_createStaticVNode方法在客户端去生成一个static node，这些静态node，会被直接innerHtml， 就不需要再创建对象，然后根据对象渲染。
+    当静态内容大到一定量级的时候，会用_createStaticVNode方法在客户端去生成一个static node，这些静态节点，会被直接innerHtml， 就不需要再创建对象，然后根据对象渲染。
 ```
