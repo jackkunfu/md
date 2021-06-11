@@ -190,7 +190,7 @@ app.mount = (containerOrSelector) => {
 本质：是用来描述 DOM 的 JavaScript 对象: 普通元素节点、组件节点等 纯文本 vnode、注释 vnode
 优点：1.抽象化利于比对，最小化的dom更新  2.跨平台
 
-普通节点
+普通元素节点
   const vnode = {
     type: 'button',
     props: { 
@@ -237,9 +237,9 @@ function createVNode(type, props = null ,children = null) {
             ? 2 /* FUNCTIONAL_COMPONENT */
             : 0
   const vnode = {
-    type,
+    type, // 具体的元素名称或者组件对象
     props,
-    shapeFlag,
+    shapeFlag, // 不同的 shapeFlag 对应不同的 vnode 节点类型
     // 一些其他属性
   }
   // 标准化子节点，把不同数据类型的 children 转成数组或者文本类型
@@ -264,8 +264,10 @@ const render = (vnode, container) => {
   // 缓存 vnode 节点，表示已经渲染
   container._vnode = vnode
 }
+```
 
-
+## patch 渲染
+```
 patch 函数有两个功能，一个是根据 vnode 挂载 DOM，一个是根据新旧 vnode 更新 DOM
 const patch = (n1: oldVNode, n2: newVNode, container, anchor = null, parentComponent = null, parentSuspense = null, isSVG = false, optimized = false) => {
   // 如果存在新旧节点, 且新旧节点类型不同，则销毁旧节点
@@ -305,4 +307,124 @@ const patch = (n1: oldVNode, n2: newVNode, container, anchor = null, parentCompo
       }
   }
 }
+```
+## patch 初次渲染创建
+```
+// 初始对比传入 App 组件是个组件 vnode  进入 default 中的 processComponent
+const processComponent = (n1, n2, container, anchor, parentComponent, parentSuspense, isSVG, optimized) => {
+  if (n1 == null) { // 首次旧的虚拟 dom 不存在，直接执行挂载组件 mountComponent
+    mountComponent(n2, container, anchor, parentComponent, parentSuspense, isSVG, optimized)
+  } else { // 旧虚拟 dom 存在，说明需要更新组件，执行 updateComponent
+    updateComponent(n1, n2, parentComponent, optimized)
+  }
+}
+```
+
+```
+mountComponent: 处理渲染组件节点 vnode, 创建组件实例、设置组件实例、设置并运行带副作用的渲染函数。
+// 首次创建挂载组件
+const mountComponent = (initialVNode, container, anchor, parentComponent, parentSuspense, isSVG, optimized) => {
+  // 创建组件实例
+  const instance = (initialVNode.component = createComponentInstance(initialVNode, parentComponent, parentSuspense))
+  // 设置组件实例
+  setupComponent(instance)
+  // 设置并运行带副作用的渲染函数
+  setupRenderEffect(instance, initialVNode, container, anchor, parentSuspense, isSVG, optimized)
+}
+```
+
+```
+副作用函数
+这里你可以简单地理解为，当组件的数据发生变化时，effect 函数包裹的内部渲染函数 componentEffect 会重新执行一遍，从而达到重新渲染组件的目的。
+渲染组件生成 subTree、把 subTree 挂载到 container 中。
+const setupRenderEffect = (instance, initialVNode, container, anchor, parentSuspense, isSVG, optimized) => {
+  // 创建响应式的副作用渲染函数
+  instance.update = effect(function componentEffect() {
+    if (!instance.isMounted) {
+      // 渲染组件生成子树 vnode
+      const subTree = (instance.subTree = renderComponentRoot(instance))
+      // 把子树 vnode 挂载到 container 中
+      patch(null, subTree, container, anchor, instance, parentSuspense, isSVG)
+      // 保留渲染生成的子树根 DOM 节点
+      initialVNode.el = subTree.el
+      instance.isMounted = true
+    }
+    else {
+      // 更新组件
+    }
+  }, prodEffectOptions)
+}
+```
+
+```
+组件 vnode 与 子树 subtree vnode
+组件本身的 vnode 节点是组件 vnode，本身节点的 vnode
+组件渲染生成的组件内部的整个 vnode 成为 subtree vnode，组件内部整个组件树结构对应的 vnode
+例子：index.vue 中使用 <hello></hello>, hello.vue: 内容 <div>Hello World</div>
+  hello 组件这个节点本身的 vnode 是 组件vnode：{ type: hello, prop: ..., shapeflag: ... }
+  对应的 subtree vnode : {
+    type: 'div', props: {}, children: 'Hello World'
+  }
+```
+
+```
+setupRenderEffect 中生成 subtree 之后，开始递归调用 patch 对整个 subtree vnode 进行打补丁渲染
+subtree vnode 属于组件内部的整个 vnode 对象，一般由元素节点包裹，patch 处理渲染普通元素节点就会使用到处理普通 DOM 元素的 processElement 函数
+const processElement = (n1, n2, container, anchor, parentComponent, parentSuspense, isSVG, optimized) => {
+  isSVG = isSVG || n2.type === 'svg'
+  if (n1 == null) { //挂载元素节点
+    mountElement(n2, container, anchor, parentComponent, parentSuspense, isSVG, optimized)
+  } else { //更新元素节点
+    patchElement(n1, n2, parentComponent, parentSuspense, isSVG, optimized)
+  }
+}
+```
+
+```
+mountElement：处理渲染普通元素节点 vnode 创建 DOM 元素节点、处理 props、处理 children、挂载 DOM 元素到 container 上。
+const mountElement = (vnode, container, anchor, parentComponent, parentSuspense, isSVG, optimized) => {
+  let el
+  const { type, props, shapeFlag } = vnode
+  // 创建 DOM 元素节点
+  el = vnode.el = hostCreateElement(vnode.type, isSVG, props && props.is)
+  if (props) {
+    // 处理 props，比如 class、style、event 等属性
+    for (const key in props) {
+      if (!isReservedProp(key)) {
+        hostPatchProp(el, key, null, props[key], isSVG)
+      }
+    }
+  }
+  if (shapeFlag & 8 /* TEXT_CHILDREN */) {
+    // 处理子节点是纯文本的情况
+    hostSetElementText(el, vnode.children)
+  } else if (shapeFlag & 16 /* ARRAY_CHILDREN */) {
+    // 处理子节点是数组的情况
+    mountChildren(vnode.children, el, null, parentComponent, parentSuspense, isSVG && type !== 'foreignObject', optimized || !!vnode.dynamicChildren)
+  }
+  // 把创建的 DOM 元素节点挂载到 container 上
+  hostInsert(el, container, anchor)
+}
+```
+
+```
+mountChildren：遍历 children 获取到每一个 child，然后递归执行 patch 方法挂载每一个 child
+  从组件背部顶层 mountElement 创建 DOM 元素节点、处理 props、处理 children、挂载 DOM 元素到 container 上之后，处理子集节点 mountChildren
+const mountChildren = (children, container, anchor, parentComponent, parentSuspense, isSVG, optimized, start = 0) => {
+  for (let i = start; i < children.length; i++) {
+    // 预处理 child
+    const child = (children[i] = optimized
+      ? cloneIfMounted(children[i])
+      : normalizeVNode(children[i]))
+    // 递归 patch 挂载 child
+    patch(null, child, container, anchor, parentComponent, parentSuspense, isSVG, optimized)
+  }
+}
+
+通过递归 patch 这种深度优先遍历树的方式，我们就可以构造每层级 vnode 对应的 dom 节点，最终构造出完整的 DOM 树，完成组件的渲染。
+处理完所有子节点后，最后通过 hostInsert 方法把创建的 DOM 元素节点挂载到 container 上
+```
+
+## patch diff 对比更新
+```
 ```
