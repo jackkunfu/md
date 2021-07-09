@@ -35,60 +35,12 @@ new webpack.optimize.UglifyJsPlugin({
 在以上过程中,Webpack 会在特定的时间点广播出特定的事件,插件在监听到感兴趣的事件后会执行特定的逻辑,并且插件可以调用 Webpack 提供的 API 改变 Webpack 的运行结果。
 ```
 
-## 钩子大致类型
-```
-const {
-  SyncHook, // 触发时按照顺序依次执行
-  SyncBailHook, // 根据每一步返回的值来决定要不要继续往下走，如果return了一个非undefined的值 那就不会往下走
-
-  SyncWaterfallHook, // 每一步都依赖上一步的执行结果, 上一步结果作为下一步的参数
-  ---
-  let [first, ...others] = this.tasks;
-  /** 利用reduce() 累计执行 
-    * 首先传入第一个 first 并执行
-    * l是上一个task n是当前task
-    * 这样满足了 下一个函数依赖上一个函数的执行结果
-  */
-  others.reduce((l,n)=>{
-      return n(l);
-  },first(...args));
-  ---
-
-  SyncLoopHook, // 在满足一定条件时 循环执行某个函数
-  ---
-  this.hooks.tap('node',(name) => {
-    console.log('node',name);
-    /** 当不满足条件时 会循环执行该函数 
-      * 返回值为udefined时 终止该循环执行
-    */
-    return ++this.index === 5 ? undefined : '学完5遍node后再学react';
-  });
-  this.tasks.forEach((task)=>{
-    /** 注意 此处do{}while()循环的是每个单独的task */
-    do{
-      /** 拿到每个task执行后返回的结果 */
-      result = task(...args);
-      /** 返回结果不是udefined时 会继续循环执行该task */
-    } while (result !== undefined);
-  });
-  ---
-
-  AsyncParallelHook, AsyncParallelBailHook, AsyncSeriesHook, AsyncSeriesBailHook, AsyncSeriesWaterfallHook
-} = require("tapable")
-Sync开头的都是同步的钩子，Async开头的都是异步的钩子。而异步的钩子又可分为并行和串行，其实同步的钩子也可以理解为串行的钩子。
-使用：
-  声明，定义
-    this.hooks.同步钩子名称.tap()
-    this.hooks.异步钩子名称.tapAsync()
-  调用执行:
-    this.hooks.同步钩子名称.call()
-    this.hooks.异步钩子名称.callAsync()
-```
 ## Compiler 相关
+
 ```
 class Compiler {
   construtor () {
-    this.hooks = Object.freeze({ // 定义各种钩子对象，大致三类  SyncHook   SyncBailHook   AsyncSeriesHook
+    this.hooks = Object.freeze({ // 定义各种钩子对象
 			initialize: new SyncHook([]), // /** @type {SyncHook<[]>} */
 			shouldEmit: new SyncBailHook(["compilation"]), // /** @type {SyncBailHook<[Compilation], boolean>} */
 			done: new AsyncSeriesHook(["stats"]), // /** @type {AsyncSeriesHook<[Stats]>} */
@@ -124,7 +76,59 @@ class Compiler {
 }
 ```
 
-# 简易实现  simple-webpack
+## plugin 钩子大致类型
+
+```
+const {
+  SyncHook, // 触发时按照顺序依次执行
+  SyncBailHook, // 根据每一步返回的值来决定要不要继续往下走，如果return了一个非undefined的值 那就不会往下走
+
+  SyncWaterfallHook, // 每一步都依赖上一步的执行结果, 上一步结果作为下一步的参数
+  ---
+  let [first, ...others] = this.tasks;
+  /** 利用reduce() 累计执行
+    * 首先传入第一个 first 并执行
+    * l是上一个task n是当前task
+    * 这样满足了 下一个函数依赖上一个函数的执行结果
+  */
+  others.reduce((res, fn) => {
+      return fn(res);
+  },first(...args));
+  ---
+
+  SyncLoopHook, // 在满足一定条件时 循环执行某个函数
+  ---
+  this.hooks.tap('node',(name) => {
+    console.log('node',name);
+    /** 当不满足条件时 会循环执行该函数
+      * 返回值为udefined时 终止该循环执行
+    */
+    return ++this.index === 5 ? undefined : '学完5遍node后再学react';
+  });
+  this.tasks.forEach((task)=>{
+    /** 注意 此处do{}while()循环的是每个单独的task */
+    do{
+      /** 拿到每个task执行后返回的结果 */
+      result = task(...args);
+      /** 返回结果不是udefined时 会继续循环执行该task */
+    } while (result !== undefined);
+  });
+  ---
+
+  AsyncParallelHook, AsyncParallelBailHook, AsyncSeriesHook, AsyncSeriesBailHook, AsyncSeriesWaterfallHook
+} = require("tapable")
+Sync开头的都是同步的钩子，Async开头的都是异步的钩子。而异步的钩子又可分为并行和串行，其实同步的钩子也可以理解为串行的钩子。
+使用：
+  声明，定义
+    this.hooks.同步钩子名称.tap()
+    this.hooks.异步钩子名称.tapAsync()
+  调用执行:
+    this.hooks.同步钩子名称.call()
+    this.hooks.异步钩子名称.callAsync()
+```
+
+# 简易实现 simple-webpack
+
 ```
 const fs = require('fs')
 const babelParse = require('@babel/parser')
@@ -181,6 +185,7 @@ module.exports = class Webpack {
   }
 }
 ```
+
 ```
 重写 require 函数 (浏览器不能识别commonjs语法),输出bundle
 // 输出文件路径
@@ -203,14 +208,15 @@ const bundle = `(function(graph){
 fs.writeFileSync(filePath, bundle, 'utf-8')
 ```
 
-# webpack 自定义 loader
-```
-增加自定义 loader 目录
-配置 resolveLoader: [ 'node_modules', './myLoaderDir' ]
+## webpack 自定义 loader
 
+```
 开发：
   导出一个函数， 参数是当前的处理的文件源码字符串
     自定义 loader 函数不能是箭头函数，因为自定义 loader 函数中会调取 webpack 的一些 api 实现功能，调取方式是通过 this.xxx(callback) 的方式，需要用到 this，箭头函数 this 会丢失
+      this.callback   ----  返回数据，类似 return
+      this.async  ----  告知返回的结果是异步的返回结果
+      this.query --- 获取配置使用 loader 的时候配置的参数
   须有返回值 return
 
   /myLoaderDir/self-less-loader.js
@@ -252,16 +258,17 @@ fs.writeFileSync(filePath, bundle, 'utf-8')
             test: '\.js',
             1. 不传参
             use: path.resolve(__dirname, './myLoaderDir/self-less-loader.js')   // 须是绝对路径 经过 path.resolve(__dirname 处理
-            2. 传参
-            use: { // 用对象形式可以传参 自定义 loader 中 通过 this.query 接收
+            2. 传参   自定义 loader 中 通过 this.query 接收
+            use: {
               loader: path.resolve(__dirname, './myLoaderDir/self-less-loader.js')   // 须是绝对路径 经过 path.resolve(__dirname 处理,
+              // 用对象形式可以传参 自定义 loader 中 通过 this.query 接收
               options: { a: 1, b: 2 }
             }
           }
         ]
       }
     }
-    
+
   2. 配置 resolveLoader
     {
       resolveLoader: [ 'node_modules', './myLoaderDir' ]
@@ -275,7 +282,8 @@ fs.writeFileSync(filePath, bundle, 'utf-8')
 
 ```
 
-# webpack 自定义 plugin
+## webpack 自定义 plugin
+
 ```
 1. 是一个构造函数，new 实例化之后，配置给 webpack 的 plugins 中等待声明周期的钩子执行触发执行
 2. 如何定义在具体钩子事件执行：定义原型 apply 方法，定义触发何种钩子执行
@@ -291,7 +299,7 @@ fs.writeFileSync(filePath, bundle, 'utf-8')
       compiler.hooks.[hookName].tap('自定义的事件名称', complication => {
         console.log(complication)
 
-        // tap 的钩子没有第二个回调参数函数执行
+        // tap 的同步钩子没有第二个回调参数函数执行
       })
       compiler.hooks.[hookName].tapAsync('自定义的事件名称', (complication, cb) => {
         console.log(complication)
@@ -306,14 +314,14 @@ fs.writeFileSync(filePath, bundle, 'utf-8')
           }
         }
 
-        cb() // tapAsync 最终需要执行第二个回调函数    异步功能完成之后通知 webpack 
+        cb() // tapAsync 的异步钩子最终需要执行第二个回调函数    异步功能完成之后通知 webpack
       })
     }
   }
 ```
 
+# babel：将新语法转化为 es5，默认只转换 JS 语法，而不转换新的 API，
 
-# babel：将新语法转化为 es5，默认只转换JS语法，而不转换新的API，
 ```
 配置：
   options: {
@@ -339,7 +347,7 @@ babel 总共分为三个阶段：解析，转换，生成。
 babel 本身不具有任何转化功能，它把转化的功能都分解到一个个 plugin 里面。因此当我们不配置任何插件时，经过 babel 的代码和输入是相同的。
 
 插件：
-  语法插件： 解析这一步就使得 babel 能够解析更多的语法。(babel 内部使用的解析类库叫做 babylon，并非 babel 自行开发)
+  语法插件： 解析这一步就使得 babel 能够解析更多的语法。(babel 内部使用的解析类库叫做 babylon)
   转译插件： 转换这一步把源码转换并输出： (a) => a 就会转化为 function (a) {return a}
   如果我们使用了转译插件，就不用再使用语法插件了。
 

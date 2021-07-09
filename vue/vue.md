@@ -1,4 +1,11 @@
-# vue2
+## keep-alive
+
+```
+keep-alive 原理：
+  主要是把符合缓存的页面 vnode 对象存储到 this.cahce 里
+  当符合条件再次展示的时候，cache 中有得直接渲染当前 vnode 实例渲染展示
+  之后执行组件的 activated 生命周期钩子函数
+```
 
 ## vue diff 算法 - 同级比对渲染
 
@@ -359,8 +366,7 @@ const setupRenderEffect = (instance, initialVNode, container, anchor, parentSusp
       // 保留渲染生成的子树根 DOM 节点
       initialVNode.el = subTree.el
       instance.isMounted = true
-    }
-    else {
+    } else {
       // 更新组件
     }
   }, prodEffectOptions)
@@ -481,9 +487,14 @@ const setupRenderEffect = (instance, initialVNode, container, anchor, parentSusp
   // 创建响应式的副作用渲染函数
   instance.update = effect(function componentEffect() {
     if (!instance.isMounted) {
-      // 渲染组件
-    }
-    else {
+      // 渲染组件生成子树 vnode
+      const subTree = (instance.subTree = renderComponentRoot(instance))
+      // 把子树 vnode 挂载到 container 中
+      patch(null, subTree, container, anchor, instance, parentSuspense, isSVG)
+      // 保留渲染生成的子树根 DOM 节点
+      initialVNode.el = subTree.el
+      instance.isMounted = true
+    } else {
       // 更新组件
       let { next, vnode } = instance
       // next 表示新的组件 vnode
