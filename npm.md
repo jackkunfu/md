@@ -20,15 +20,23 @@
     - 报错
       - npm login 登录
       - npm adduser 注册 （貌似有用 不是 QQ 邮箱的报错 400）
+  - 确保 npm 上没有别的开发者提交的同名都包存在
 
-- npm publish
+- 撤销发布
 
+  - npm unpublish --force
+  - Notice: samePakageName republished needs until 24 hours have passed. 撤销后同包名重新发布需要 24 小时之后
+
+- 更新发布
+
+  - 更改版本号
+    - 直接修改 package.json 中的 version ---- 随意自主
+    - npm version ---- 按照一定规则
+      - npm version prerelease/prepatch/preminor/premajor/patch/minor/major
+  - 再次执行 npm publish
+
+- FAQ
   - 403 forbidden
-
     - npm config set registry https://registry.npmjs.org
     - 登录 npmjs.com 验证邮箱
     - 包名重复、VPN 梯子存在等
-
-  - 撤销发布
-    - npm unpublish --force
-    - Notice: samePakageName republished needs until 24 hours have passed.
