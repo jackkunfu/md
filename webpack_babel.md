@@ -233,74 +233,67 @@ module.exports = function (source) {
 
 1. module.rules 直接使用
    {
-   module: {
-   rules: [
-   {
-   test: '\.js',
-   1. 不传参
-   use: path.resolve(__dirname, './myLoaderDir/self-less-loader.js') // 须是绝对路径 经过 path.resolve(__dirname 处理
-   2. 传参 自定义 loader 中 通过 this.query 接收
-   use: {
-   loader: path.resolve(__dirname, './myLoaderDir/self-less-loader.js') // 须是绝对路径 经过 path.resolve(__dirname 处理,
-   // 用对象形式可以传参 自定义 loader 中 通过 this.query 接收
-   options: { a: 1, b: 2 }
-   }
-   }
-   ]
-   }
+    module: {
+      rules: [
+        {
+          test: '\.js',
+          1. 不传参
+          use: path.resolve(__dirname, './myLoaderDir/self-less-loader.js') // 须是绝对路径 经过 path.resolve(__dirname 处理
+          2. 传参 自定义 loader 中 通过 this.query 接收
+          use: {
+          loader: path.resolve(__dirname, './myLoaderDir/self-less-loader.js') // 须是绝对路径 经过 path.resolve(__dirname 处理,
+          // 用对象形式可以传参 自定义 loader 中 通过 this.query 接收
+          options: { a: 1, b: 2 }
+          }
+        }
+      ]
+    }
    }
 
 2. 配置 resolveLoader
-   {
-   resolveLoader: [ 'node_modules', './myLoaderDir' ]
-   }
-   之后 可以直接文件名使用即可 不需要 path.resolve(\_\_dirname 处理
-   use: 'self-less-loader',
-   use: {
-   loader: 'self-less-loader',
-   options: { a: 1, b: 2 }
-   }
-
+  { resolveLoader: [ 'node_modules', './myLoaderDir' ] }
+    之后 可以直接文件名使用即可 不需要 path.resolve(\_\_dirname 处理
+    use: 'self-less-loader',
+    use: {
+    loader: 'self-less-loader',
+    options: { a: 1, b: 2 }
+  }
 ```
 
 ## webpack 自定义 plugin
 
 ```
-
 1.  是一个构造函数，new 实例化之后，配置给 webpack 的 plugins 中等待声明周期的钩子执行触发执行
 2.  如何定义在具体钩子事件执行：定义原型 apply 方法，定义触发何种钩子执行
-    class SomePlugin {
+  class SomePlugin {
     constructor (opt) {
-    this.opt = opt
+      this.opt = opt
     }
-
     apply (compiler) { // apply 函数参数为当前的 compiler ，可以借此对象定义钩子触发函数，
-    // 钩子类型有同步和异步两种
-    // tap 同步钩子的定义触发，tapAsync 异步钩子的定义触发
-    // 不同的钩子，有不同的参数传递， 例如：webpack 当前的资源对象： complication
-    compiler.hooks.[hookName].tap('自定义的事件名称', complication => {
-    console.log(complication)
+      // 钩子类型有同步和异步两种
+      // tap 同步钩子的定义触发，tapAsync 异步钩子的定义触发
+      // 不同的钩子，有不同的参数传递， 例如：webpack 当前的资源对象： complication
+      compiler.hooks.[hookName].tap('自定义的事件名称', complication => {
+        console.log(complication)
+        // tap 的同步钩子没有第二个回调参数函数执行
+      })
+      compiler.hooks.[hookName].tapAsync('自定义的事件名称', (complication, cb) => {
+        console.log(complication)
 
-          // tap 的同步钩子没有第二个回调参数函数执行
-        })
-        compiler.hooks.[hookName].tapAsync('自定义的事件名称', (complication, cb) => {
-          console.log(complication)
-
-          // 例子：生成文件 assets 属性处理
-          complication.assets['a.txt'] = {
-            source: function () {
-              return '内容字符串'
-            },
-            size: function () {
-              return 内容字符串的长度
-            }
+        // 例子：生成文件 assets 属性处理
+        complication.assets['a.txt'] = {
+          source: function () {
+            return '内容字符串'
+          },
+          size: function () {
+            return 内容字符串的长度
           }
+        }
 
-          cb() // tapAsync 的异步钩子最终需要执行第二个回调函数    异步功能完成之后通知 webpack
-        })
-
+        cb() // tapAsync 的异步钩子最终需要执行第二个回调函数    异步功能完成之后通知 webpack
+      })
     }
-    }
+  }
 
 ```
 

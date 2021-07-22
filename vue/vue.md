@@ -78,6 +78,15 @@ function createComputedGetter (key) {
 }
 ```
 
+- computed 缓存
+  - computed watcher 初始化时，带有 lazy: false 的属性
+  - 内部相关响应式对象属性和 computed watcher 相互依赖收集
+  - 当相关的属性字段更新时，key 中的 subs watcher 数组中的所有 watcher 遍历执行
+    - 如果 watcher 带有 dirty 属性，把 dirty 属性设置为 true，dirty 为 ture 时，才会执行到 watcher.evaluate()
+      - evaluate: 重新执行 watch 的 getter 方法（重新计算） / 再把 dirty 设置为 false
+  - updata 的时候 判断如果 存在 lazy 属性 则 把 watcher.dirty = true
+  -
+
 ```
 computed watcher 实例 updata 的时候 判断如果 存在 lazy: true 则 把 watcher.dirty = true
 数据变化触发当前 computed watcher 时触发 get 属性：createComputedGetter 方法时 if (watcher.dirty) 执行 watcher.evaluate() 重新计算下当前最新的值，其他变化直接展示之前的数据不会重新计算
