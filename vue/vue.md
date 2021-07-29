@@ -107,25 +107,21 @@ diff算法优化：vue3通过优化diff算法减少了遍历成本，然后通�
     当静态内容大到一定量级的时候，会用_createStaticVNode方法在客户端去生成一个static node，这些静态节点，会被直接innerHtml， 就不需要再创建对象，然后根据对象渲染。
 ```
 
-```
-数据劫持优化：在渲染 DOM 的时候访问了数据，我们可以对它进行访问劫持，这样就在内部建立了依赖关系，也就知道数据对应的 DOM 是什么了
-  vue2 中使用 Object.defineProperty, 嵌套较深对象处理方式是初始化就得需要深层次递归劫持数据定义所有层级的 get set，性能负担较大
-  vue3 使用 proxy，劫持的是整个对象，嵌套较深对象的处理方式是在 getter 中去递归响应式，好处是真正访问到的内部对象才会变成响应式，很大程度上提升了性能
-```
+- 数据劫持优化：在渲染 DOM 的时候访问了数据，我们可以对它进行访问劫持，这样就在内部建立了依赖关系，也就知道数据对应的 DOM 是什么了
 
-```
-打包体积优化：引入 tree-shaking 的技术，减少打包体积。
-  编译阶段，静态分析打标记：依赖 ES2015 模块语法的静态结构（即 import 和 export），通过编译阶段的静态分析，找到没有引入的模块并打上标记。
-  压缩阶段，删除标记无用代码：会利用例如 uglify-js、terser 等压缩工具真正地删除这些没有用到的代码。
-```
+  - vue2 中使用 Object.defineProperty, 嵌套较深对象处理方式是初始化就得需要深层次递归劫持数据定义所有层级的 get set，性能负担较大
+  - vue3 使用 proxy，劫持的是整个对象，嵌套较深对象的处理方式是在 getter 中去递归响应式，好处是真正访问到的内部对象才会变成响应式，很大程度上提升了性能
 
-```
-Composition API:
-  1. 优化逻辑组织
-  2. 优化逻辑复用
-  3. 对 tree-shaking 友好，代码也更容易压缩。
-  4. 函数对类型声明支持的更方便
-```
+- 打包体积优化：引入 tree-shaking 的技术，减少打包体积。
+
+  - 编译阶段，静态分析打标记：依赖 ES2015 模块语法的静态结构（即 import 和 export），通过编译阶段的静态分析，找到没有引入的模块并打上标记。
+  - 压缩阶段，删除标记无用代码：会利用例如 uglify-js、terser 等压缩工具真正地删除这些没有用到的代码。
+
+- Composition API:
+  - 优化逻辑组织
+  - 优化逻辑复用
+  - 对 tree-shaking 友好，代码也更容易压缩。
+    -. 函数对类型声明支持的更方便
 
 ```
 组件渲染更新：创建 vnode -> 渲染 vnode -> 生成 DOM
@@ -163,8 +159,41 @@ function createRenderer(options) {
   return baseCreateRenderer(options)
 }
 function baseCreateRenderer(options) {
+  // 从 options 中拿到各种操作节点的方法构造 patch 函数
+  const { insert: hostInsert, remove: hostRemove, patchProp: hostPatchProp, forcePatchProp: hostForcePatchProp, createElement: hostCreateElement, createText: hostCreateText, createComment: hostCreateComment, setText: hostSetText, setElementText: hostSetElementText, parentNode: hostParentNode, nextSibling: hostNextSibling, setScopeId: hostSetScopeId = NOOP, cloneNode: hostCloneNode, insertStaticContent: hostInsertStaticContent } = options;
+  // 遇到各种类型的虚拟 dom 变化比对，做出对应的操作方法
+  const patch = (oldVnode, newVnode, ...) => {
+    // patching & not same type, unmount old tree
+    if (oldVnode && !isSameVNodeType(oldVnode, newVnode)) {
+      anchor = getNextHostNode(n1);
+      unmount(n1, parentComponent, parentSuspense, true);
+      oldVnode = null;
+    }
+    if (n2.patchFlag === -2 /* BAIL */) {
+      optimized = false;
+      n2.dynamicChildren = null;
+    }
+    const { type, ref, shapeFlag } = n2;
+    switch (type) {
+      text: processText(n1, n2, container, anchor),
+      Comment$1: processCommentNode(n1, n2, container, anchor),
+      Fragment: processFragment(),
+      shapeFlag & 1: processElement(),
+      shapeFlag & 6: processComponent()
+      ......
+    }
+  }
+  // render 方法就是执行 patch 执行比对更新，如果 vnode 不存执行 unmount
   function render(vnode, container) {
-    // 组件渲染的核心逻辑
+    if (vnode == null) {
+      if (container._vnode) {
+        unmount(container._vnode, null, null, true);
+      }
+    } else {
+      patch(container._vnode || null, vnode, container, null, null, null, isSVG);
+    }
+    flushPostFlushCbs();
+    container._vnode = vnode;
   }
   return {
     render,
@@ -174,7 +203,7 @@ function baseCreateRenderer(options) {
         const app = {
           _component: rootComponent,
           _props: rootProps,
-          mount(rootContainer) { // 不仅仅是为 Web 平台服务，它的目标是支持跨平台渲染，跨平台通用挂载逻辑，具体实例化之后会根据当前 container 再次改写
+          mount: (rootContainer) => { // 不仅仅是为 Web 平台服务，它的目标是支持跨平台渲染，跨平台通用挂载逻辑，具体实例化之后会根据当前 container 再次改写
             // 创建根组件的 vnode
             const vnode = createVNode(rootComponent, rootProps)
             // 利用渲染器渲染 vnode
