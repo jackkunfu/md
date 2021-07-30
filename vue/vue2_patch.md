@@ -5,9 +5,40 @@
 - ## 子组件挂载流程
 
   - vm.$mount()
+
     - mountComponent
+
       - updateComponent
+
         - vm.\_update(vm.\_render())
+
+          - \_render
+
+            - options.render.call(vm, createElement)
+            - createElement
+              - 根据组件的 render 方法，初始化渲染生成 vnode
+              - vnode 注册一些 钩子
+                ```
+                  const componentVNodeHooks = {
+                    init() {
+                      const child = (vnode.componentInstance = createComponentInstanceForVnode(
+                        vnode,
+                        activeInstance
+                      ));
+                      child.$mount(hydrating ? vnode.elm : undefined, hydrating);
+                    },
+                    prepatch() {
+                      updateChildComponent()
+                    },
+                    insert() {
+                      if (!mounted) callHook('mounted')
+                    },
+                    destroy() {}
+                  }
+                ```
+
+          - \_update
+            - patch(vnode)
 
 - vnode hooks
 
@@ -43,25 +74,29 @@
 
   - 如果不存在新的 Vnode 执行销毁钩子
     - invokeDestroyHook (vnode)
-      - 触发实例内部 destroy 钩子 vnode.data.destroy(vnode)
-      - for 循环 vnode.children, 每个子集递归执行销毁钩子 invokeDestroyHook(child)
+      - 触发 vnode destroy 钩子 vnode.data.destroy(vnode)
+      - 循环触发各个模块 module 中的 destroy 属性方法
+      - 递归触发子组件的上面两个步骤
+        - for 循环 vnode.children, 每个子集递归执行销毁钩子 invokeDestroyHook(child)
   - 如果不存在旧的 Vnode 执行 createElm 创建
-  - 如果存在 Vnode 并且 sameVnode(oldVnode, vnode) 执行 patchVnode(oldVnode, vnode)
-    - sameVnode - key 相等 、tag 相等 、data 相等是同一对象 ...
+  - patcVnode 处理新旧 vnode 的 children
+    - 如果存在 Vnode 并且 sameVnode(oldVnode, vnode)
+      - sameVnode - key 相等 、tag 相等 、data 相等是同一对象 ...
 
 - patchVnode(oldVnode, vnode)
 
   - oldVnode === vnode
     - 直接 return 不做任何处理，直接复用
-  - 触发执行实例内部 prepatch 钩子
+  - 触发执行 vnode prepatch 钩子
     - vnode.data.prepatch() ??? 是否正确
       - 执行 updateChildComponent
         - 这是干啥???
-  - 触发执行组件 update 钩子
-    - vnode.data.update()
+  - 触发 update 钩子
+    - 循环触发各个 module 中的 update 方法，变更各个属性数据
+    - 触发 vnode 中的 update: vnode.data.update()
   - 处理文本节点变更
     - node.setTextContent()
-  - 处理新老 vnode 的子集 children： oldVnode.children / vnode.children
+  - 处理新老 vnode 的子集 children 数组： oldVnode.children / vnode.children
     - 新老 vnode 子节点 children 都存在的时候执行 updateChildren 进行 diff 比对更新
       - updateChildren(elm, oldCh, ch, insertedVnodeQueue, removeOnly)
   - 还干了啥???
@@ -87,10 +122,11 @@
     - vnode.elm = nodeOps.createElement(tag, vnode)
   - createChildren 处理子集创建挂载
     - 循环 vnode.children, 递归调用 createElm(child) 把子集挂载到 vnode.elm 上
-  - invokeCreateHooks 触发组件 created 钩子
+  - invokeCreateHooks 各个模块中的 create 对应的方法创建各个 module
   - 创建的 dom 节点插入到父元素 dom 上去
     - insert(parentElm, vnode.elm, refElm);
-      - if (!ismounted) 触发组件 mounted 钩子
+      - nodeOps.insertBefore
+      - nodeOps.appendChild
 
 - createComponent
   - 触发实例内部 init 钩子
@@ -100,4 +136,4 @@
       - 挂载实例
         - child.$mount()
           - 生成当前组件实例的 watcher，绑定的当前的 \_update(\_render())
-          -
+          - 最终又递归执行子组件的 patch
