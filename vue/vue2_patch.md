@@ -14,33 +14,42 @@
 
           - \_render
 
-            - options.render.call(vm, createElement)
-            - createElement
-              - 根据组件的 render 方法，初始化渲染生成 vnode
-              - vnode 注册一些 钩子
-                ```
-                  const componentVNodeHooks = {
-                    init() {
-                      const child = (vnode.componentInstance = createComponentInstanceForVnode(
-                        vnode,
-                        activeInstance
-                      ));
-                      child.$mount(hydrating ? vnode.elm : undefined, hydrating);
-                    },
-                    prepatch() {
-                      updateChildComponent()
-                    },
-                    insert() {
-                      if (!mounted) callHook('mounted')
-                    },
-                    destroy() {}
-                  }
-                ```
+            - options.render.call(vm, createElement) 生成 vnode
+              - 根据组件的 tempalte render 方法，初始化渲染生成 vnode
+              - createElement 即是常用的 h 函数
+            - createElement: \_render 中的 createElement 方法
+              - 内部执行的是 \_createElement 方法
 
           - \_update
             - patch(vnode)
 
-- vnode hooks
+- \_createElement
+
+  - return new Vnode()
+  - createComponent：\_render 中的 createComponent 方法
+    - 如果是自定义组件 触发 createComponent 生成组件 vnode
+    - 注册一些组件 vnode 钩子
+      ```
+        const componentVNodeHooks = {
+          init() {
+            const child = (vnode.componentInstance = createComponentInstanceForVnode(
+              vnode,
+              activeInstance
+            ));
+            child.$mount(hydrating ? vnode.elm : undefined, hydrating);
+          },
+          prepatch() {
+            updateChildComponent()
+          },
+          insert() {
+            if (!mounted) callHook('mounted')
+          },
+          destroy() {}
+        }
+      ```
+    - return vnode
+
+- modules hooks
 
   - const hooks = ['create', 'activate', 'update', 'remove', 'destroy'];
 
@@ -128,7 +137,7 @@
       - nodeOps.insertBefore
       - nodeOps.appendChild
 
-- createComponent
+- patch 中的 createComponent 方法
   - 触发实例内部 init 钩子
     - vnode.data.hooks.init()
       - 调用 createComponentInstanceForVnode 生成组件实例
