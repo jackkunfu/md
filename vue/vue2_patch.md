@@ -1,29 +1,30 @@
 <!-- - ## 最初跟组件实例化执行 $mount 挂载跟组件 -->
 
-# vue2 patch.js
+## 子组件挂载流程
 
-- ## 子组件挂载流程
+- vm.$mount()
 
-  - vm.$mount()
+  - mountComponent
 
-    - mountComponent
+    - updateComponent
 
-      - updateComponent
+      - vm.\_update(vm.\_render())
 
-        - vm.\_update(vm.\_render())
+        - 执行原型链上的 \_update \_render 方法
 
-          - \_render
+        - \_render
 
-            - options.render.call(vm, createElement) 生成 vnode
-              - 根据组件的 tempalte render 方法，初始化渲染生成 vnode
-              - createElement 即是常用的 h 函数
-            - createElement: \_render 中的 createElement 方法
-              - 内部执行的是 \_createElement 方法
+          - options.render.call(vm, createElement) 生成 vnode
+            - 根据组件的 render 渲染函数，初始化渲染生成 vnode
+              - render 渲染函数来自自定义 render 方法或者 compiler 组件的 template 字符串
+            - createElement 即是常用的 h 函数
+          - createElement: \_render 中的 createElement 方法
+            - 内部执行的是 \_createElement 方法
 
-          - \_update
-            - patch(vnode)
+        - \_update
+          - patch(vnode)
 
-- \_createElement
+- \_render 中的 \_createElement
 
   - return new Vnode()
   - createComponent：\_render 中的 createComponent 方法
@@ -43,33 +44,38 @@
           },
           insert() {
             if (!mounted) callHook('mounted')
+            if (keepAlive) ...
           },
           destroy() {}
         }
       ```
     - return vnode
 
-- modules hooks
+- \_render 中的 \_createElement 中的 modules hooks
 
   - const hooks = ['create', 'activate', 'update', 'remove', 'destroy'];
 
+# vue2 patch.js
+
 - createPatchFunction: core/vdom/patch.js
 
-  - const cbs = { create: [], update: []}
+  - 根据传入的 nodeOps modules 生成当前的 patch 函数
+  - 所有 modules 中的钩子方法都存储到 cbs 对象中供 invoke 触发
 
-    - 存储 /web/runtime/modules 下的各个属性的操作的对象
-      - attrs.js/class.js/dom-props.js/events.js/style.js/transition.js
-        - 都是 return 一个对象 包括 hooks 里的某几个 key 对应的执行方法
-          ```
-          例子：class.js
-          export default {
-            create: updateClass, update: updateClass
-          }
-          ```
-      - 循环把所有 modules 里的对应的属性统一 push 到 cbs 对象对应的数组中
-    - 后续一些操作 invokeDestroyHook / invokeCreateHook / invokeDestroyHook
-      - 是找到 cbs 中对应的钩子函数，循环对应的数组执行
-      - 达到触发各个 modules 中各自的创建或者更新函数执行来更新各种属性
+    - const cbs = { create: [], update: []}
+      - 存储 /web/runtime/modules 下的各个属性的操作的对象
+        - attrs.js/class.js/dom-props.js/events.js/style.js/transition.js
+          - 都是 return 一个对象 包括 hooks 里的某几个 key 对应的执行方法
+            ```
+            例子：class.js
+            export default {
+              create: updateClass, update: updateClass
+            }
+            ```
+        - 循环把所有 modules 里的对应的属性统一 push 到 cbs 对象对应的数组中
+      - 后续一些操作 invokeDestroyHook / invokeCreateHook / invokeDestroyHook
+        - 是找到 cbs 中对应的钩子函数，循环对应的数组执行
+        - 达到触发各个 modules 中各自的创建或者更新函数执行来更新各种属性
 
   - return function patch() {}
 
@@ -91,6 +97,9 @@
   - patcVnode 处理新旧 vnode 的 children
     - 如果存在 Vnode 并且 sameVnode(oldVnode, vnode)
       - sameVnode - key 相等 、tag 相等 、data 相等是同一对象 ...
+  - invokeInsertHook 触发 vnode insert 钩子
+    - if (!mounted) callHook('mounted')
+    - if (keepAlive) ...
 
 - patchVnode(oldVnode, vnode)
 
@@ -112,10 +121,10 @@
 
 - updateChildren diff
 
-  - 准备两组 两个指针 分别指向 vode 的 children 和 oldVnode 的 children
-  - 头头 / 尾尾 / 头尾 / 尾头
-    - sameVnode 判断 如果一致 递归调用 patchVnode 比较更新
-  - 最后判断是否有 key，如果有 key 在剩余的 oldVnode 中找到相同 key 的 vnode
+  - 准备两组 两个指针 分别指向 vode 的 children 和 oldVnode 的 children 的首尾对象
+  - 头头 / 尾尾 / 头尾 / 尾头 来比较匹配
+    - 每个步骤都先 sameVnode 判断 如果一致 递归调用 patchVnode 比较更新
+  - 如果匹配不到，判断是否有 key，如果有 key 在剩余的 oldVnode 中找到相同 key 的 vnode
     - sameVnode 判断 如果一致 递归调用 patchVnode 比较更新
   - 不存在 key 或者 !sameVnode 不一致 进行 createElm 直接创建替换
   - 指针变化 循环以上操作 直到某一组指针的头大于尾巴结束 while 循环
@@ -123,7 +132,7 @@
     - 新的 vnode 的 chileren 指针之间还有数据 createElm 直接创建追加操作
     - 旧的 oldVnode 的 children 指针之间还有数据 直接删除对应的所有老节点
 
-- createElm
+- patch 中的 createElm
 
   - 如果可以 createComponent(vnode) 返回 true
     - 直接 return 处理组件的创建挂载
@@ -131,7 +140,9 @@
     - vnode.elm = nodeOps.createElement(tag, vnode)
   - createChildren 处理子集创建挂载
     - 循环 vnode.children, 递归调用 createElm(child) 把子集挂载到 vnode.elm 上
-  - invokeCreateHooks 各个模块中的 create 对应的方法创建各个 module
+  - invokeCreateHooks
+    - 触发各个 moudles 中的 create 钩子
+    - 触发 vnode 本身的 creata 钩子
   - 创建的 dom 节点插入到父元素 dom 上去
     - insert(parentElm, vnode.elm, refElm);
       - nodeOps.insertBefore

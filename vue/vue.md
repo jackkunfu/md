@@ -121,7 +121,7 @@ diff算法优化：vue3通过优化diff算法减少了遍历成本，然后通�
   - 优化逻辑组织
   - 优化逻辑复用
   - 对 tree-shaking 友好，代码也更容易压缩。
-    -. 函数对类型声明支持的更方便
+    - 函数对类型声明支持的更方便
 
 ```
 组件渲染更新：创建 vnode -> 渲染 vnode -> 生成 DOM
@@ -240,7 +240,7 @@ app.mount = (containerOrSelector) => {
 ## vnode
 
 ```
-本质：是用来描述 DOM 的 JavaScript 对象: 普通元素节点、组件节点等 纯文本 vnode、注释 vnode
+本质：是用来描述 DOM 的 JavaScript 对象: 普通元素节点、组件节点、纯文本 vnode、注释 vnode
 优点：1.抽象化利于比对，最小化的dom更新  2.跨平台
 
 普通元素节点
@@ -268,11 +268,20 @@ app.mount = (containerOrSelector) => {
   }
 ```
 
+- 执行 app.mount() 挂载
+  - createVnode 生成 vnode
+    - const vnode = createVnode(rootComponent)
+    - 对 props 做标准化处理
+    - 对 vnode 的类型信息编码
+    - 创建 vnode 对象
+    - 标准化子节点 children
+  - render(vnode) 渲染 vnode
+    - if (!vnode) unmount()
+
 ```
 创建vnode:
 app.mount() 时生成 vnode: const vnode = createVNode(rootComponent, rootProps)
 
-createVNode 对 props 做标准化处理、对 vnode 的类型信息编码、创建 vnode 对象，标准化子节点 children 。
 function createVNode(type, props = null ,children = null) {
   if (props) {
     // 处理 props 相关逻辑，标准化 class 和 style
