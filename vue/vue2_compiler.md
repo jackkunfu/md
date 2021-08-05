@@ -1,5 +1,9 @@
 ## vue2 compiler
 
+- 把组件模板 template 转换成组件渲染函数 render
+
+  - 渲染函数 render 用来生成当前组件的虚拟 dom vnode
+
 - entry-runtime-with-compilier 中改写 $mount 增加渲染函数 render 相关判断处理
 
   - 保存原本逻辑

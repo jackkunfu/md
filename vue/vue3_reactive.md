@@ -23,7 +23,7 @@
 
 - Proxy 第二个参数 handler 监测数据获取以及变化增加响应式
 
-```
+  ```
   const mutableHandlers = {
     get(访问触发),
     set(设置触发),
@@ -31,7 +31,7 @@
     has(in 操作触发),
     ownKeys(Object.getOwnPropertyNames 访问触发)
   }
-```
+  ```
 
 - get 函数
 
@@ -66,7 +66,7 @@
   - Proxy 劫持的是对象本身，并不能劫持子对象的变化
   - 递归处理与 Object.defineProperty 的不同
     - Object.defineProperty 是在初始化阶段，即定义劫持对象的时候就已经递归执行了
-    - Proxy 是在对象属性被访问 get 的时候才递归执行下一步 reactive
-    - Proxy 是延时定义子对象响应式的实现，在性能上会有较大的提升
+    - Proxy 延时处理子对象响应式的实现，在性能上会有较大的提升
+      - Proxy 是在对象属性被访问 get 的时候才递归执行下一步 reactive
 
 - 依赖收集 track 函数

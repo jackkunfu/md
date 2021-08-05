@@ -200,9 +200,18 @@ function baseCreateRenderer(options) {
     createApp: function createAppAPI(render) {
       // createApp createApp 方法接受的两个参数：根组件的对象和 prop
       return function createApp(rootComponent, rootProps = null) {
+        // 生成跟组件 app 对象上下文 context
+        const context = createAppContext()
         const app = {
+          _context: context,
           _component: rootComponent,
           _props: rootProps,
+          use(){},
+          mixin(){},
+          component(){},
+          directive(){},
+          unmount(){},
+          provide(){},
           mount: (rootContainer) => { // 不仅仅是为 Web 平台服务，它的目标是支持跨平台渲染，跨平台通用挂载逻辑，具体实例化之后会根据当前 container 再次改写
             // 创建根组件的 vnode
             const vnode = createVNode(rootComponent, rootProps)
@@ -271,12 +280,15 @@ app.mount = (containerOrSelector) => {
 - 执行 app.mount() 挂载
   - createVnode 生成 vnode
     - const vnode = createVnode(rootComponent)
-    - 对 props 做标准化处理
-    - 对 vnode 的类型信息编码
-    - 创建 vnode 对象
-    - 标准化子节点 children
-  - render(vnode) 渲染 vnode
+      - 对 props 做标准化处理
+      - 对 vnode 的类型信息编码
+      - 创建 vnode 对象
+      - 标准化子节点 children
+        - ## normalizeChildren
+  - render(vnode, container) 渲染 vnode
     - if (!vnode) unmount()
+    - patch(container.\_vnode || null, vnode)
+    - container.\_vnode = vnode
 
 ```
 创建vnode:
