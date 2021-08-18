@@ -1,4 +1,5 @@
 /*
+ * 简单四则运算
  * 解析表达式求值
  * 求出当前字符串中优先级最低的运算符
  * 最低优先级所在为之为界限，递归求出左右两边的值
@@ -44,17 +45,18 @@ function calc(str, s, e) {
   else if (operate === '*') return a * b;
   else if (operate === '/') return a / b;
 }
-// console.log(calc('1+1'));
+console.log(calc('1+1'));
 
+// 斐波那契数列
 function f(n) {
   let a = 0,
     b = 1;
   if (n == 0 || n == 1) return n;
-  let i = 2;
-  while (i < n) {
-    b = b + a;
-    a;
-  }
+  // let s = 2;
+  // while (s < n) {
+  //   b = b + a;
+  //   a;
+  // }
   for (var i = 2; i <= n; i++) {
     var temp = b;
     b = a + b;
@@ -63,6 +65,6 @@ function f(n) {
   return b;
 }
 
-console.log(f(3));
+console.log(f(100));
 
 //  0 1 1 2 3 5 8 13 21 34 55
