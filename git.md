@@ -1,0 +1,10 @@
+- OpenSSL SSL_read: Connection was reset, errno 10054 ...
+  - 更新DNS缓存
+    - ipconfig /flushdns
+  - 修改解除SSL认证
+    - git config --global http.sslVerify "false"
+  - 文件太大了
+    - git config http.postBuffer 5242880003
+  - 配置的用户名，邮箱可能输入错误
+    - git config --global user.name "xxx"
+    - git config --global user.email "xxx"
