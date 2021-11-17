@@ -141,7 +141,7 @@
   - createChildren 处理子集创建挂载
     - 循环 vnode.children, 递归调用 createElm(child) 把子集挂载到 vnode.elm 上
   - invokeCreateHooks
-    - 触发各个 moudles 中的 create 钩子
+    - 循环 cbs 触发各个 moudles 中的 create 钩子
     - 触发 vnode 本身的 creata 钩子
   - 创建的 dom 节点插入到父元素 dom 上去
     - insert(parentElm, vnode.elm, refElm);

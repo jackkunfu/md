@@ -1,17 +1,36 @@
-## 线上去除 console 增加 UglifyJsPlugin 配置 compress 的 drop_console
+## 优化项目打包
 
-```
-new webpack.optimize.UglifyJsPlugin({
-  compress: {
-    warnings: false,
-    drop_debugger: true,
-    drop_console: true
-  },
-  sourceMap: true
-})
-```
+- resolve.modules
+  - 减小文件搜索范围
+- 多线程打包
+  - 替换 UglifyJS
+    - 默认提供的 UglifyJS 插件，由于采用单线程压缩，速度慢
+    - webpack-parallel-uglify-plugin
+      - 可以并行运行 UglifyJS 插件，更加充分而合理的使用 CPU 资源，这可以大大减少的构建时间
+  - thread-loader 、happyPack
+- 设置 babel 的 cacheDirectory 为 true
+  - loader: 'babel-loader?cacheDirectory=true'
+- 动态链 DLLPlugin/DLLReferencePlugin
+  - 分离出第三方库无变化无须重新打包
+- external 设置第三方依赖外链引用
+  - cdn 引入各种库链接
+- 如果你确定一个模块中，没有其它新的依赖，可以配置 noParse， Webpack 将不再扫描这个文件中的依赖
 
-# webpack 构建流程
+  - 对于比较大型类库，将能促进性能表现
+  - module: { noParse: /node_modules\/(element-ui\.js)/ }
+
+- 体积优化
+
+  - css 提取（mini-css-extract-plugin）
+  - css 压缩 （optimize-css-assets-webpack-plugin
+  - html 压缩 （html-webpack-plugin ）
+  - externals （排除不需要被打包的第三方）
+  - js 压缩 （production 模式自动开启）
+  - tree-shake ( production 模式自动开启(webpack4 限 EsModule;webpack5 不限 EsModule,CommonJs,优秀得很) )
+  - code-split ( optimization )
+  - import(懒加载，预加载（预加载慎用））
+
+  - 链接：https://juejin.cn/post/6883305742422507533
 
 ## Webpack 的运行流程是一个串行的过程,从启动到结束会依次执行以下流程 :
 
@@ -297,58 +316,66 @@ module.exports = function (source) {
 
 ```
 
+- webapack HMR 热更新
+  - HotModuleReplacementPlugin
+
 # babel：将新语法转化为 es5，默认只转换 JS 语法，而不转换新的 API，
 
 ```
 
 配置：
 options: {
-"presets": [
-["@babel/env", { // env 表示包含 es2015 + es2016 + es2017 等等技术委员会已经发布的所有功能，env 的核心目的是通过配置得知目标环境的特点，然后只做必要的转换
-"targets": {
-"browsers": ["last 2 versions", "ie 11"]
-},
-"useBuiltIns": "usage" // 配置 useBuiltIns: 'usage' 属性可以使 babel-polyfill 中的按需加载，根据具体使用情况 polyfill
-}]
-],
-"plugins": ["@babel/transform-runtime"] // 配置使用 transform-runtime 插件，可以利用插件中的 helps 函数对重复出现的函数进行集中打包，减少体积
+  "presets": [
+    ["@babel/env", { // env 表示包含 es2015 + es2016 + es2017 等等技术委员会已经发布的所有功能，env 的核心目的是通过配置得知目标环境的特点，然后只做必要的转换
+      "targets": {
+        "browsers": ["last 2 versions", "ie 11"]
+      },
+      "useBuiltIns": "usage" // 配置 useBuiltIns: 'usage' 属性可以使 babel-polyfill 中的按需加载，根据具体使用情况 polyfill
+    }]
+  ],
+  "plugins": ["@babel/transform-runtime"] // 配置使用 transform-runtime 插件，可以利用插件中的 helps 函数对重复出现的函数进行集中打包，减少体积
 }
 
-执行顺序：
-Plugin 会运行在 Preset 之前。
-Plugin 会从前到后顺序执行。
-Preset 的顺序则 刚好相反(从后向前)。 preset 的逆向顺序主要是为了保证向后兼容，一般配置 Preset 都是按照规范的时间顺序列出即可
-
-更详细： https://zhuanlan.zhihu.com/p/43249121
-
-babel 总共分为三个阶段：解析，转换，生成。
-babel 本身不具有任何转化功能，它把转化的功能都分解到一个个 plugin 里面。因此当我们不配置任何插件时，经过 babel 的代码和输入是相同的。
-
-插件：
-语法插件： 解析这一步就使得 babel 能够解析更多的语法。(babel 内部使用的解析类库叫做 babylon)
-转译插件： 转换这一步把源码转换并输出： (a) => a 就会转化为 function (a) {return a}
-如果我们使用了转译插件，就不用再使用语法插件了。
-
-presets： 一组插件的集合
-env：核心目的是通过配置得知目标环境的特点，然后只做必要的转换
-targets：browsers、node
-module：取值可以是 amd, umd, systemjs, commonjs 和 false。这可以让 babel 以特定的模块化格式来输出代码。如果选择 false 就不进行模块化处理。
-
-babel-polyfill：
-babel 默认只转换 js 语法，而不转换新的 API
-比如 Iterator、Generator、Set、Maps、Proxy、Reflect、Symbol、Promise 等全局对象，以及一些定义在全局对象上的方法(比如 Object.assign)都不会转码。
-让这些方法运行，必须使用 babel-polyfill
-缺点：
-会导致打出来的包非常大，因为 babel-polyfill 是一个整体，把所有方法都加到原型链上
-会污染全局变量，给很多类的原型链上都作了修改
-
-babel-runtime：
-core-js: 转换一些内置类 (Promise, Symbols 等等) 和静态方法 (Array.from 等)。绝大部分转换是这里做的。自动引入。
-regenerator: 作为 core-js 的拾遗补漏，主要是 generator/yield 和 async/await 两组的支持。当代码中有使用 generators/async 时自动引入。
-helpers：避免重复代码，定义方法抽离并统一起来，重复引用，解决代码重复的问题
-
 ```
 
-```
+- 执行顺序：
 
-```
+  - Plugin 会运行在 Preset 之前。
+  - Plugin 会从前到后顺序执行。
+  - Preset 的顺序则 刚好相反(从后向前)。 preset 的逆向顺序主要是为了保证向后兼容，一般配置 Preset 都是按照规范的时间顺序列出即可
+
+- 更详细参考： https://zhuanlan.zhihu.com/p/43249121
+
+- babel 总共分为三个阶段
+
+  - 解析，转换，生成。
+  - babel 本身不具有任何转化功能，它把转化的功能都分解到一个个 plugin 里面
+  - 当不配置任何插件时，经过 babel 的代码和输入是相同的。
+
+- 插件：
+
+  - 语法插件： 解析这一步就使得 babel 能够解析更多的语法。(babel 内部使用的解析类库叫做 babylon)
+  - 转译插件： 转换这一步把源码转换并输出： (a) => a 就会转化为 function (a) {return a}
+  - 如果我们使用了转译插件，就不用再使用语法插件了。
+
+- presets
+
+  - 一组插件的集合
+  - env：核心目的是通过配置得知目标环境的特点，然后只做必要的转换
+  - targets：browsers、node
+  - module：取值可以是 amd, umd, systemjs, commonjs 和 false。这可以让 babel 以特定的模块化格式来输出代码。如果选择 false 就不进行模块化处理。
+
+- babel-polyfill：
+
+  - babel 默认只转换 js 语法，而不转换新的 API
+  - 比如 Iterator、Generator、Set、Maps、Proxy、Reflect、Symbol、Promise 等全局对象，以及一些定义在全局对象上的方法(比如 Object.assign)都不会转码。
+  - 让这些方法运行，必须使用 babel-polyfill
+  - 缺点：
+    - 会导致打出来的包非常大，因为 babel-polyfill 是一个整体，把所有方法都加到原型链上
+    - 会污染全局变量，给很多类的原型链上都作了修改
+
+- babel-runtime：
+
+  - core-js: 转换一些内置类 (Promise, Symbols 等等) 和静态方法 (Array.from 等)。绝大部分转换是这里做的。自动引入。
+  - regenerator: 作为 core-js 的拾遗补漏，主要是 generator/yield 和 async/await 两组的支持。当代码中有使用 generators/async 时自动引入。
+  - helpers：避免重复代码，定义方法抽离并统一起来，重复引用，解决代码重复的问题
