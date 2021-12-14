@@ -31,8 +31,7 @@
       output: process.stdout
     })
 
-    
-    // 这段代码会询问用户名，当输入了文本并且用户按下回车键时，则会发送问候语。
+    // 这段代码会询问用户名，当输入了文本并且用户按下回车键时，则会执行 回调函数 输入的内容作为回调函数的参数
     readline.question(`你叫什么名字?`, name => {
       console.log(`你好 ${name}!`)
       readline.close()

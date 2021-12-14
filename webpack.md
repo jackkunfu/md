@@ -1,3 +1,57 @@
+## 大致过程原理链接
+  - 从入口模块开始解析,解析出当前的依赖，得到依赖的代码块 chunk
+    - parse/transform/generator
+      - 生成当前文件以及递归依赖文件的抽象语法树
+      - 经过配置的 loader plugin 转换相关的处理
+      - 生成目标代码字符串
+  - 根据当前所有的依赖map对象
+    - 生成的代码块 chunk，生成map对象 
+    - key 是当前的依赖路径
+    - value
+      - 当前文件的子级依赖对象信息
+      - 当前文件的代码块 chunk
+    ```
+    var codeMap = {
+      "./src/index.js": {
+        "deps": { "./add.js": "./src/add.js" },
+        "code": "....."
+      },
+      "./src/add.js": {
+        "deps": {},
+        "code": "......"
+      }
+    }
+    ```
+  - 生成 bundle 文件
+    - 模拟生成 exports 对象
+      - var exports = {}
+    - 模拟 require 函数
+      ```
+      function require(file) {
+        var exports = {};
+        (function (exports, code) {
+          eval(code)
+        })(exports, file.code)
+        return exports
+      }
+      ```
+    - 自执行函数包裹生成 bundle 文件
+      ```
+      (function (map) {
+        function require(file) {
+          var exports = {};
+          (function (exports, code) {
+            eval(code);
+          })(exports, map[file].code);
+          return exports;
+        }
+        require("index.js"); // require 执行入口文件
+      })(codeMap);
+      ```
+
+  - https://juejin.cn/post/6961961165656326152
+  - https://www.bilibili.com/video/BV1dV411p7gp
+
 ## 优化项目打包
 
 - resolve.modules
