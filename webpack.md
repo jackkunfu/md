@@ -52,7 +52,9 @@
   - https://juejin.cn/post/6961961165656326152
   - https://www.bilibili.com/video/BV1dV411p7gp
 
-## 优化项目打包
+## 优化项目打
+
+- vue-cli 配置见 vue/vue-cli.md
 
 - resolve.modules
   - 减小文件搜索范围
@@ -73,6 +75,9 @@
   - 对于比较大型类库，将能促进性能表现
   - module: { noParse: /node_modules\/(element-ui\.js)/ }
 
+- 生成 gzip 文件
+  - compression
+
 - 体积优化
 
   - css 提取（mini-css-extract-plugin）
@@ -82,6 +87,12 @@
   - js 压缩 （production 模式自动开启）
   - tree-shake ( production 模式自动开启(webpack4 限 EsModule;webpack5 不限 EsModule,CommonJs,优秀得很) )
   - code-split ( optimization )
+    - 配置 splitChunks
+      ```
+        splitChunks: {
+          minChunks: 
+        }
+      ```
   - import(懒加载，预加载（预加载慎用））
 
   - 链接：https://juejin.cn/post/6883305742422507533
