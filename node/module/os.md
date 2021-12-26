@@ -1,0 +1,36 @@
+- os.arch()
+  - 返回标识底层架构的字符串，例如 arm、x64、arm64
+- os.cpus()
+  - 返回关于系统上可用的 CPU 的信息数组
+- os.endianness()
+  - 根据是使用大端序或小端序编译 Node.js，返回 BE 或 LE
+- os.freemem()
+  - 返回代表系统中可用内存的字节数
+- os.homedir()
+  - 返回到当前用户的主目录的路径
+- os.hostname()
+  - 主机名
+- os.loadavg()
+  - 操作系统对平均负载的计算
+    - 仅在 Linux 和 macOS 上返回有意义的值。
+- os.networkInterfaces()
+  - 返回系统上可用的网络接口的详细信息
+- os.platform()
+  - 返回为 Node.js 编译的平台：darwin freebsd linux openbsd win32 ...
+- os.release()
+  - 返回标识操作系统版本号的字符串
+- os.tmpdir()
+  - 返回指定的临时文件夹的路径
+- os.totalmem()
+  - 返回表示系统中可用的总内存的字节数
+- os.type()
+  - 标识操作系统: Linux / macOS 上为Darwin / Windows 上为 Windows_NT
+- os.uptime()
+  - 返回自上次重新启动以来计算机持续运行的秒数
+- os.userInfo()
+  - 返回包含当前 username、uid、gid、shell 和 homedir 的对象
+- os.EOL
+  - 可给出行定界符序列。 在 Linux 和 macOS 上为 \n，在 Windows 上为 \r\n
+- os.constants
+  - os.constants.signals 可告知所有与处理过程信号相关的常量，例如 SIGHUP、SIGKILL 等。
+  - os.constants.errno 可设置用于错误报告的常量，例如 EADDRINUSE、EOVERFLOW 等。

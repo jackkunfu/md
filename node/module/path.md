@@ -1,0 +1,16 @@
+- path.basename()
+- path.dirname()
+  - 返回路径的目录文件夹
+- path.extname()
+  - 返回路径的扩展名部分
+    - 文件夹返回空字符串
+- path.isAbsolute()
+  - 如果是绝对路径，则返回 true。
+- path.join()
+- path.normalize()
+  - 当包含类似 .、.. 或双斜杠等相对的说明符时，则尝试计算实际的路径
+    - require('path').normalize('/users/joe/..//test.txt') //'/users/test.txt'
+- path.parse()
+  - 返回解析路径的对象，包括属性：root dir base name ext
+- path.relative()
+- path.resolve()
