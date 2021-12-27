@@ -7,3 +7,14 @@ fs.stat('./1.txt', 'r', (err, fd) => {
     console.log(fd)
   }
 })
+
+const content = '\r一些内容'
+
+fs.appendFile('./1.txt', content, err => {
+  if (err) {
+    console.error('appendFile err')
+    console.error(err)
+    return
+  }
+  //完成！
+})

@@ -13,8 +13,11 @@
 
 - const EventEmitter = require('events')
 - const emitter = new EventEmitter()
+  - emitter
+    - events 实例
   - emitter.addListener()
     - emitter.on() 的别名
+    - on 或 addListener 添加监听器时，监听器会被添加到监听器队列中的最后一个，并且最后一个被调用
   - emitter.emit()
   - emitter.eventNames()
     - 返回字符串（表示在当前 EventEmitter 对象上注册的事件）数组：
@@ -28,6 +31,10 @@
   - emitter.on()
   - emitter.once()
   - emitter.prependListener()
+    - 类似 on / addListener, 使用 prependListener 增加事件到监听器队列中的的最前面
   - emitter.prependOnceListener()
   - emitter.removeAllListeners()
+    - 移除所有监听特定事件的监听器
   - emitter.removeListener()
+    - 移除监听器的某个特定类型的某个事件函数
+      - removeListener(name, fn)
