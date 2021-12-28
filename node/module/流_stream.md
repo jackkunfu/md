@@ -8,6 +8,75 @@
 - Node.js 中的流
   - stream 模块 提供了构建所有流 API 的基础。 所有的流都是 EventEmitter 的实例。
 
+- 可读流
+  ```
+    // 创建
+    const Stream = require('stream')
+    const readableStream = new Stream.Readable({
+      read() {}
+    })
+    // 发送数据
+    readableStream.push('hi!')
+    readableStream.push('ho!')
+  ```
+- 可写流
+  ```
+    // 创建
+    const Stream = require('stream')
+    const writableStream = new Stream.Writable({
+      write (chunk, encoding, next) {
+        console.log(chunk.toString())
+        next()
+      }
+    })
+    // 传输流
+    process.stdin.pipe(writableStream)
+  ```
+
+- 获取可读流中的数据
+  ```
+    // 创建并发送数据
+    const Stream = require('stream')
+    const readableStream = new Stream.Readable({
+      read() {}
+    })
+    readableStream.push('hi!')
+    readableStream.push('ho!')
+
+    /* 1. pipe 到可写流中 */
+    /*
+     * 分别输出 chunk:  hi! 和 chunk:  ho!
+     */
+    const writableStream = new Stream.Writable({
+      write (chunk, encoding, next) {
+        // console.log('encoding, ', encoding) // buffer
+        console.log('chunk: ', chunk.toString())
+        next()
+      }
+    })
+    readableStream.pipe(writableStream)
+    process.nextTick(() => {
+      writableStream.end() // 使用信号通知已结束写入的可写流
+    })
+
+    /* 2. 使用 readable 事件直接地消费可读流 */
+    /*
+     * 一次性输出 <Buffer 68 69 21 68 6f 21>
+     * toString() 方法 一次性输出：hi!ho!
+     */
+    readableStream.on('readable', () => {
+      console.log(readableStream.read()) // <Buffer 68 69 21 68 6f 21>
+      console.log(readableStream.read().toString()) // hi!ho!
+    })
+
+  ```
+
+- 发送数据到可写流
+  - writableStream.write('hey!\n')
+- 使用信号通知已结束写入的可写流 ？
+  - writableStream.end()
+
+- 各种流
 - process.stdin 返回连接到 stdin 的流。
 - process.stdout 返回连接到 stdout 的流。
 - process.stderr 返回连接到 stderr 的流。

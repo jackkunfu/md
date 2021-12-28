@@ -1,4 +1,11 @@
 - process
+  - 捕获 node 中未捕获的异常
+    ```
+      process.on('uncaughtException', err => {
+        console.error('有一个未捕获的错误', err)
+        process.exit(1) //强制性的（根据 Node.js 文档）
+      })
+    ```
   - 无须 require，直接使用
   - process.exit()
     - 代码结束进程

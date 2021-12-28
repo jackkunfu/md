@@ -25,20 +25,30 @@
 
 - 数据操作
 - 获取
-  - Buffer（字节数组）可以像数组一样使用下标访问
-    - Buffer.from('Hey!')
-      - <Buffer 48 65 79 21>
-        - 数据内容为对应的 16 进制
-    - Buffer.from('Hey!')[0]
-      - 返回 72
-        - 72 是 字符H 对应的 Unicode 码的十进制，上面的第一个显示数字是 48，是 H 的 Unicode 码的 16 进制
-      - var a = Buffer.from('abc')
-      - console.log(a) // <Buffer 61 62 63>  // 61|62|63 字符对应的 Unicode 码的 16 进制
-  - 使用 toString() 方法打印 buffer 的全部内容
-    - Buffer.from('abc').toString() // 'abc'
+  - 貌似 Buffer 中存储的都是数字数据 ？
+  - console.log
+    - 直接 <Buffer> 中展示的数据内容是字符对应的 16 进制
+      - Buffer.from('Hey!')
+        - <Buffer 48 65 79 21>
+          - H -> 48 ( 16 进制 )
+    - 下标获取具体位置数据，返回对应字符的对应的 Unicode 码的 10 进制数据
+      - Buffer.from('Hey!')[0]
+        - 返回 72
+          - H -> 72 ( 10 进制 )
+  - .toString()
+    - 返回字符串原本内容
+      - Buffer.from('abc').toString() // 'abc'
   - .length
-    - Buffer.from('abc').toString() // 3
+    - Buffer.from('abc').length() // 3
   - for of 迭代
+    - 每一项的 字符对应的 10 进制数字
+    ```
+      const buf = Buffer.from('Hey!')
+      for (const item of buf) {
+        console.log(item) // 72 101 121 33
+        console.log(typeof item) // number
+      }
+    ```
 
 - 操作
   - write
@@ -50,9 +60,12 @@
         console.log(a.toString()) // '12c'
       ```
   - 下标操作
+    - 下标操作复制的数据是字符的十进制数据
     ```
       var a = Buffer.from('abc')
       a[1] = 100 // 字符 d 对应的 Unicode 码的十进制
+      // 'd'.charCodeAt() // 100
+      // String.fromCharCode(100) // d
       console.log(a.toString()) // 'adc'
       console.log(a) // <Buffer 61 64 63>  // 61|64|63 是对应的数据的 16 进制
     ```
