@@ -8,11 +8,30 @@
 
 ```
 function curry (fn) {
-  const c = (...args) => (args.length === fn.length) ?
-          fn(...args) : (..._args) => c(...args, ..._args)
-  return c
+  return function curryFn(...args) {
+    if (args.length >= fn.length) { // 通过 函数的 length 属性，获取函数的参数个数
+      // return fn.apply(this, args) // 参数个数大于函数的参数个数时，直接执行函数
+      return fn(...args) // 参数个数大于函数的参数个数时，直接执行函数
+    }
+    // 参数个数小于
+    return function (...args1) {
+      console.log([...args, ...args1])
+      // return curryFn.apply(this, args.concat(args1))
+      return curryFn(...args.concat(args1))
+    }
+  }
 }
+
+var fn = (a, b, c) => a + b + c
+var cc = curry(fn)
+var bb = cc(1, 2) ===> function(c) { return 1 + 2 + c }
+bb(3) ===> 3 + 3
 ```
+- 柯里化
+  - 原理：
+    - 输入参数少于函数的参数长度的时候，缓存传入的参数，递归生成当前的柯里化函数，参数为输入参数和
+  - 用途
+    - 参数缓存复用
 
 # 拷贝
 
